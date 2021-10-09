@@ -12,6 +12,13 @@ vector<unsigned long long> vals(26);
 
 unsigned int bases[26];
 
+void print(ostream &os1, ofstream &os2, const std::string &str)
+{
+    os1 << str;
+    if (os2.is_open())
+        os2 << str;
+}
+
 void set_zero() {
     for (int i = 0; i < 26; i++) {
         // vals[i] = ;
@@ -42,12 +49,12 @@ unsigned long long convert_in_decimal(const string &num, const int base) {  // �
 string convert_in_base(unsigned long long num, const int base) {
     string accum;
     unsigned long long buf = 0;
-    while(num) {
+    do {
         buf = num % base;
         accum = string(1, char(buf < 10 ? buf + '0': buf + 'A' - 10)) + accum;
-        cout << "accum = " << accum << endl;
+        // cout << "accum = " << accum << endl;
         num /= base;
-    }
+    } while(num);
 
     return accum;
 }
@@ -94,14 +101,33 @@ unsigned long long xor_(const unsigned long long &left, const unsigned long long
 
 vector<function<unsigned long long (const unsigned long long &, const unsigned long long &)>> funcs;
 
-int read(const unsigned int var, const unsigned int base) {
-    if (base > 36 or base < 2) return -1; // сделать ошибку
+int read(const unsigned int var, const unsigned int base, ofstream &fout) {
+    if (base > 36 or base < 2 or var > 35) return -1; // сделать ошибку
     string inp;
-    cin >> inp;
-    for (size_t i = 0; i < inp.length(); i++) {
-        if(!isalnum(inp[i])) return 0;
+    cout << "Enter variable " << char(var + 'A') << " in base " << base << ":" << endl << ">>";
+    if (fout.is_open()) {
+        fout << "Dialog with user: " << "Enter variable " << char(var + 'A') << " in base " << base << ":" << endl;
     }
-    if (!check_system(inp, base)) return 0;
+    cin >> inp;
+    if (fout.is_open()) {
+        fout << "User entered: " << inp << endl;
+    }
+    for (size_t i = 0; i < inp.length(); i++) {
+        if(!isalnum(inp[i])) {
+            cout << "Wrong value" << endl;
+            if (fout.is_open()) {
+                fout << "Inputed wrong value" << endl;
+            }
+            return 0;
+        }
+    }
+    if (!check_system(inp, base)) {
+        cout << "Wrong value" << endl;
+        if (fout.is_open()) {
+            fout << "Inputed wrong value" << endl;
+        }
+        return 0;
+    }
     vals[var] = convert_in_decimal(inp, base);
     bases[var] = base;
     return bases[var];
@@ -110,7 +136,7 @@ int read(const unsigned int var, const unsigned int base) {
 int write(const unsigned int var, const unsigned int base) {
     if (var > 35 or base < 2 or base > 36) return -1;
     cout << char('A' + var) << "(" << base << ") = " << (convert_in_base(vals[var], base)) << endl;
-    return vals[var];
+    return 1;
 }
 
 unsigned long long equals(const string &in) {
@@ -155,7 +181,6 @@ size_t find_oper(const string &in, const vector<string> &opers) {
             if ((ind == 9 and pos != 3) or (ind != 9 and pos != 4)) {
                 return string::npos;
             }
-            cout << "ind = " << ind << " pos = " << pos << endl;
             return ind;
         }
         ind++;
@@ -163,8 +188,8 @@ size_t find_oper(const string &in, const vector<string> &opers) {
     return string::npos;
 }
 
-unsigned long long select_operation(const string &in, const size_t ind) {
-    if (!bases[in[0] - 'A']) return 0;
+unsigned long long select_operation(const string &in, const size_t ind, ofstream &fout) {
+    if (!isalpha(in[0])) return 0;
     if (ind == 9) {
         if (in.length() < 5) {
             return 4; // not full instr
@@ -180,6 +205,10 @@ unsigned long long select_operation(const string &in, const size_t ind) {
         }
 
         vals[in[0] - 'A'] = ~vals[in[4] - 'A'];
+        if (fout.is_open()) {
+            fout << "Operation ASSIGNMENT to variable " << char(in[0] - 'A') << " from " << "operation " << in[3] << " variable " << in[4] << endl;
+            fout << "Result is " << vals[in[0] - 'A'] << endl;
+        }
     }
     else if (ind < 5) {
         if (in.length() < 6) {
@@ -201,6 +230,10 @@ unsigned long long select_operation(const string &in, const size_t ind) {
             return 6; // unrec symb
         }
         vals[in[0] - 'A'] = funcs[ind](vals[in[3] - 'A'], vals[in[5] - 'A']);
+        if (fout.is_open()) {
+            fout << "command ASSIGNMENT to variable " << char(in[0] - 'A') << " from variable " << in[3] << "operation " << in[4] << " variable " << in[5] << endl;
+            fout << "Result is " << vals[in[0] - 'A'] << endl;
+        }
     }
     else if (ind >= 5 and ind < 9) {
         if (in.length() < 7) {
@@ -222,12 +255,16 @@ unsigned long long select_operation(const string &in, const size_t ind) {
             return 7; // unrec symb
         }
         vals[in[0] - 'A'] = funcs[ind](vals[in[3] - 'A'], vals[in[6] - 'A']);
-        // write(in[0] - 'A', 2)
+        if (fout.is_open()) {
+            fout << "command ASSIGNMENT to variable " << char(in[0] - 'A') << " from variable " << in[3] << "operation " << in[4] << in[5] << " variable " << in[6] << endl;
+            fout << "Result is " << vals[in[0] - 'A'] << endl;
+        }
     }
+    bases[in[0] - 'A'] = 10;
     return string::npos;
 }
 
-unsigned long long pre_write(const string &in) {
+unsigned long long pre_write(const string &in, ofstream &fout) {
     if (in.length() < 10) {
         return in.length() - 1;
     }
@@ -235,6 +272,7 @@ unsigned long long pre_write(const string &in) {
         return 5;
     }
     if (!isalpha(in[6])) {
+        // cout << "unrec symb" << endl;
         return 6; // unrec symb
     }
     if (!bases[in[6] - 'A']) {
@@ -265,13 +303,16 @@ unsigned long long pre_write(const string &in) {
     if ((in.length() > 10 and pos == 1) or (in.length() > 11 and pos == 2)) {
         return pos + 8 + 1;
     }
-    if (write(in[6] - 'A', base) < 0) return 8; // сделать обработку
-    // cout << "in prewrite " << in << " base = " << base << " pos = " << pos << endl;
+    if (write(in[6] - 'A', base) < 0) return 8; {
+        if (fout.is_open()) {
+            fout << "After command WRITE in base = " << base << " variable " << char(in[6] - 'A') << " = " << vals[in[6] - 'A'] << endl;
+        }
+    }
     return string::npos;
 }
 
 
-unsigned long long pre_read(const string &in) {
+unsigned long long pre_read(const string &in, ofstream &fout) {
     if (in.length() < 9) {
         return in.length() - 1;
     }
@@ -287,26 +328,34 @@ unsigned long long pre_read(const string &in) {
     if (!isdigit(in[7])) {
         return 7; // unrec symb
     }
-    if (in[8] != ')') {
+
+    size_t pos = 0;
+    int base = 0;
+
+    base = stoi(in.substr(7), &pos, 10);
+    if (pos > 2) {
+        return 7;
+    }
+
+    if (in[7 + pos] != ')') {
         return 8;
     }
-    if (in.length() > 9) {
-        return 9;
+    if ((in.length() > 9 and pos == 1) or (in.length() > 10 and pos == 2)) {
+        return pos + 8 + 1;
     }
-    // try {
     int exit_code;
-    while ((exit_code = read(in[5] - 'A', in[7] - '0')) <= 0) {
-        if (exit_code < 0) return 7; // сделать обработку
+    while ((exit_code = read(in[5] - 'A', base, fout)) <= 0) {
+        if (exit_code < 0) return 7;
     }
-    // }
-    // catch(all) {
-        // return 6; // переделать
-    // }
+    if (fout.is_open()) {
+        fout << "After command READ in base = " << base << " variable " << char(in[5] - 'A') << " = " << vals[in[5] - 'A'] << endl;
+    }
     return string::npos;
 }
 
 
-unsigned long long interpretate(const string &in) {
+unsigned long long interpretate(const string &in, ofstream &fout) {
+    if (in.length() < 1) return 0;
     size_t pos;
     vector<string> coms;
     coms.push_back("READ");
@@ -324,43 +373,34 @@ unsigned long long interpretate(const string &in) {
     opers.push_back("+>");
     opers.push_back("\\");
 
-    cout << in << endl;
-
     if(!isalpha(in[0])) return 0;
 
     if ((pos = find_com(in, coms)) == string::npos) {
-        cout << "here1\n";
         return 1;
     }
 
     if (pos == 0) {
-        cout << "here2\n";
-        if ((pos = pre_read(in)) != string::npos) {
+        if ((pos = pre_read(in, fout)) != string::npos) {
             return pos;
         }
     }
     else if (pos == 1) {
-        if ((pos = pre_write(in)) != string::npos) {
-            cout << "here3 -- " << pos << endl; // 8
+        if ((pos = pre_write(in, fout)) != string::npos) {
             return pos;
         }
     }
     else if (pos == 2) {
-        cout << "here4\n";
         if ((pos = find_oper(in, opers)) == string::npos) {
-            cout << "after find oper = " << pos << endl;
             if ((pos = equals(in)) != string::npos) {
-                cout << "pos after eq = " << pos << endl;
                 return pos;
             }
         }
         else {
-            if ((pos = select_operation(in, pos)) != string::npos) {
+            if ((pos = select_operation(in, pos, fout)) != string::npos) {
                 return pos;
             }
         }
     }
-    // cout << "before return" << endl;
     return string::npos;
 }
 
@@ -368,13 +408,36 @@ unsigned long long interpretate(const string &in) {
 // TODO: сделать обработчики ошибок И добавать ошибку UNDEFINED BEHAVIOR
 
 int main(int argc, char const *argv[]) {
+    if (argc != 2 and argc != 4) {
+        cout << "Wrong arguments" << endl;
+        return -1;
+    }
+    FILE *fin;
+    bool trace_mode = false;
+    ofstream fout;
+    if ((fin = fopen(argv[1], "r")) == NULL) {
+        cout << "Cant open file: " << argv[1] << endl;
+        return -1;
+    }
+
+    if (argc == 4) {
+        if (string(argv[2]) != string("/trace")) {
+            cout << "Wrong arguments" << endl;
+            return -1;
+        }
+        fout.open(argv[3]);
+        if (!fout) {
+            cout << "Cant open file: " << argv[1] << endl;
+            return -1;
+        }
+    }
     set_zero();
-    FILE *fin = fopen("inp", "r");
+
     char c;
     int incomment = 0;
     string command;
     size_t pos;
-    long long line_cnt = 1;
+    long long line_cnt = 1, symb_cnt = 0, cm_cnt = 1;
     funcs.push_back(disjunction);
     funcs.push_back(conjunction);
     funcs.push_back(sheffer);
@@ -385,11 +448,18 @@ int main(int argc, char const *argv[]) {
     funcs.push_back(xor_);
     funcs.push_back(coimplication);
 
-    while (!feof(fin)) {  // цикл с обработкой конца файла
+    while (!feof(fin)) {
 
         c = fgetc(fin);
+        symb_cnt++;
+        if (c == '\n') {
+            symb_cnt = 0;
+            line_cnt++;
+        }
         if (c == '%' && !incomment) {
             while ((c = fgetc(fin)) != '\n' && c != EOF);
+            line_cnt++;
+            symb_cnt = 0;
         }
 
         else if (c == '{') {
@@ -397,23 +467,33 @@ int main(int argc, char const *argv[]) {
         }
 
         else if (c == '}') {
-            if (!incomment) return -1;
+            if (!incomment) {
+                print(cout, fout, string("ERROR in line ") + to_string(line_cnt) +
+                        string(" position ") + to_string(symb_cnt) + string(" of command ") + to_string(cm_cnt) + string("\n"));
+                return -1;
+            }
+
             incomment--;
         }
 
-        else if (c == EOF && incomment) return -1; //... обработка
+        else if (c == EOF && incomment) {
+            print(cout, fout, string("ERROR in line ") + to_string(line_cnt) +
+                    string(" position ") + to_string(symb_cnt) + string(" of command ") + to_string(cm_cnt) + string("\n"));
+            return -1;
+        }
         else if (!incomment) {
-            if (isspace(c)) {
-                if (c == '\n') {
-                    line_cnt++;
-                }
+            if (isspace(c) or c == EOF) {
                 continue;
             }
             if (c == ';') {
                 pos = string::npos;
-                if ((pos = interpretate(command)) != string::npos) {
-                    cout << "ERROR in line " << line_cnt << " position " << pos << endl;
+                print(cout, fout, to_string(cm_cnt) + string("> ") + command + string("\n"));
+                if ((pos = interpretate(command, fout)) != string::npos) {
+                    print(cout, fout, string("ERROR in line ") + to_string(line_cnt) +
+                            string(" position ") + to_string(pos) + string(" of command ") + to_string(cm_cnt) + string("\n"));
+                    return -1;
                 }
+                cm_cnt++;
                 command.clear();
             }
             else {
@@ -421,7 +501,10 @@ int main(int argc, char const *argv[]) {
             }
         }
     }
-    if (command.length()) return -1;
-    cout << funcs[0](0, 1) << endl;
+    if (command.length()) {
+        print(cout, fout, string("ERROR in line ") + to_string(line_cnt) +
+                string(" position ") + to_string(symb_cnt) + string(" of command ") + to_string(cm_cnt) + string("\n"));
+        return -1;
+    }
     return 0;
 }

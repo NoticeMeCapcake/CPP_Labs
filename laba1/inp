@@ -1,6 +1,7 @@
-READ(A, 2);
-WRITE(A, 10);
-READ(F, 2);
+%READ(A, 2);
+%sdh;
+{WRITE(A, 10);
+}READ(F, 2);
 WRITE(F, 10);
 READ(R, 2);
 WRITE(R, 10);
