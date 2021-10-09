@@ -49,7 +49,7 @@ vector<string> find(int find_(const string &source, const string &substr),
 
 
 int main() {
-    vector<string> list_of_matched_files = find(find_substr, "abc\n", 3, string("in1"), string("in3"), string("in2"));
+    vector<string> list_of_matched_files = find(find_substr, "abc\n\n", 3, string("in1"), string("in3"), string("in2"));
     for (int i = 0; i < list_of_matched_files.size(); i++)
         cout << list_of_matched_files[i] << endl;
     return 0;
