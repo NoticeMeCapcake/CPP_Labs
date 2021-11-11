@@ -86,3 +86,54 @@ d_type
 
 d_namlen
 d_name
+
+
+что такое pipe - каналы
+Pipe
+Fifo тип pipe есть имя
+mkfifo("", mode)
+open(fifo)
+
+-Mkfifo
+-fork
+-open
+
+создание pipe - int Pipe(int fd[2] - дескрипторы pipe на чтение и запись) // 0 или -1
+
+
+-Pipe
+-fork
+  /         \
+close(fd[1]) close(fd[0])
+
+-pipe fd1
+-pipe fd2
+-fork
+close 1,0|close 0,1
+
+
+
+сигналы
+
+SIG ALRM - ПРОБУДИТЬ
+SIG FPE - МАТ ОШИБКИ
+CTRL_C SIG INT - ПРЕРВАТЬ ПРОЦЕСС
+SIG PIPE - ЗАВЕРШЕНИЕ РАБОТЫ
+SIG SEGV - SEGMENTATION FAULT
+SIG TERM
+SIG CHLD
+SIG USR
+SIG HUB - РАЗРЫВ СВЯЗИ С УПРАВ КАНАЛОМ
+
+сделать сигнал void (*signal(int signum, void * handler(int)))(int)
+include signal.h
+int int main(int argc, char const *argv[]) {
+    void (*old_behaviour(int) = signal(SIGINT, SIG_IGN))
+    signal(SIGINT, old_behaviour);
+    return 0;
+}
+popen() -- конвеер (перенаправление)
+
+freopen() -- открыть файл, не закрывая
+
+File *frw = freopen("foo", "w", std::out)
