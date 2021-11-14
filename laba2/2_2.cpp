@@ -444,12 +444,6 @@ public:
     AVL &operator=(const AVL<T1,T2> &tree);
     virtual T2 pop(const T1&);
     virtual void push(const Node<T1, T2>&);
-    // virtual T2& search(const T1&);
-    // virtual void prefix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
-    // virtual void infix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
-    // virtual void postfix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
-
-
     ~AVL();
 
 protected:
@@ -457,13 +451,11 @@ protected:
         virtual void hook(Node<T1,T2> *&root, vector<Node<T1, T2> (*)> &vec, const Node<T1,T2> &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree);
     };
     class AVL_Pop : public BinaryTree<T1, T2>::Pop {
-        // int pop_node(AVL_Node<T1, T2> *&root, T1 &_key, T2 &val, Comparator<T1> *cmp, vector<Node<T1, T2> (*)> &v);
         virtual void hook(Node<T1, T2> *&root, vector<Node<T1, T2> (*)> &vec, const T1 &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree);
     };
     class AVL_Search : public BinaryTree<T1, T2>::Search { // РАБОТАЕТ ТАК ЖЕ КАК И В БСТ
     };
 private:
-    // AVL_Node<T1, T2> *root = nullptr;
     void small_rotate(Node<T1, T2> ** rootative);
     void big_rotate(Node<T1, T2> ** rootative);
 };
@@ -490,15 +482,6 @@ AVL<T1, T2>::AVL(const AVL<T1,T2> &tree) {
     }
 }
 
-// template <typename T1, typename T2>
-// T2& AVL<T1, T2>:: search(const T1&) {
-//     Node<T1, T2> *req_node;
-//     int ex_code = searcher->find_node(root, _key, req_node, cmp);
-//     if (ex_code) {
-//         throw NotExistException(_key);
-//     }
-//     return req_node->key;
-// }
 
 template <typename T1, typename T2>
 AVL<T1, T2> &AVL<T1, T2>::operator=(const AVL<T1,T2> &tree) {
