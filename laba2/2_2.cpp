@@ -23,7 +23,7 @@ public:
     Node *&chld(const int var) {
         if (var <= 0)
             return left;
-        else if (var > 0)
+        else
             return right;
     }
     ~Node() {}
@@ -67,7 +67,8 @@ public:
 template <typename T1, typename T2>
 class BinaryTree : public AC <T1, T2> {
 protected:
-    Comparator<T1> *cmp;
+    BinaryTree() {}
+    Comparator<T1> *cmp = nullptr;
     void copy_traverse(const Node<T1, T2> *_root, vector<Node<T1, T2>> &vec) const;
     void del_traverse(const Node<T1, T2> *_root, vector<T1> &vec) const;
     void prefix_traverse(const Node<T1, T2> *_root, void (*func)(const T1 &_key, const T2 &val, const int &depth), int _depth) const;
@@ -75,29 +76,25 @@ protected:
     void postfix_traverse(const Node<T1, T2> *_root, void (*func)(const T1 &_key, const T2 &val, const int &depth), int _depth) const;
     class Pop {
     public:
-        int pop_node(Node<T1, T2> *&root, T1&, T2 &, Comparator<T1> *, vector<Node<T1, T2> *> &);  // protected + virtual
-    protected:
-        virtual void hook();
+        int pop_node(Node<T1, T2> *&root, T1 &_key, T2 &val, Comparator<T1> *cmp, vector<Node<T1, T2> (*)> &v);  // protected + virtual
+        virtual void hook(Node<T1, T2> *&root, vector<Node<T1, T2> (*)> &vec, const T1 &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree);
     };
     class Push {
     public:
-        int push_node(Node<T1, T2> *&root, const Node<T1, T2> &, Comparator<T1> *);
-    protected:
-        virtual void hook(Node<T1, T2> *& root, vector<Node<T1, T2>*> &v, Node<T1, T2> & _node);
+        int push_node(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp, vector<Node<T1, T2> (*)> &v);
+        virtual void hook(Node<T1,T2> *&root, vector<Node<T1, T2> (*)> &vec, const Node<T1,T2> &_node, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree);
     };
     class Search {
     public:
         int find_node(Node<T1, T2> *&root, const T1 &, Node<T1, T2> *&, Comparator<T1> *) const;
-    protected:
         virtual void hook() const;
     };
 
-    Pop *popper;
-    Push *pusher;
-    Search *searcher;
-private:
-        Node<T1, T2> *root;
-        void clean();
+    Pop *popper = nullptr;
+    Push *pusher = nullptr;
+    Search *searcher = nullptr;
+    Node<T1, T2> *root = nullptr;
+    void clean();
 public:
     ////////////
     class NotExistException : public exception {
@@ -199,7 +196,7 @@ T2 BinaryTree<T1, T2>::pop(const T1 &_key) {
     T2 popped_val;
     T1 key1 = _key;
     vector<Node<T1, T2> (*)> nodes_to_do_smth;
-    int ex_code = popper->pop_node(root, key1, popped_val, cmp, nodes_to_do_smth);
+    int ex_code = popper->pop_node(this->root, key1, popped_val, cmp, nodes_to_do_smth);
     if (ex_code) {
         throw NotExistException(_key);;
     }
@@ -208,7 +205,7 @@ T2 BinaryTree<T1, T2>::pop(const T1 &_key) {
 
 
 template <typename T1, typename T2>
-int BinaryTree<T1, T2>:: Pop:: pop_node(Node<T1, T2> *&root, T1 &_key, T2 &val, Comparator<T1> *cmp, vector<Node<T1, T2>*> &v) {
+int BinaryTree<T1, T2>:: Pop:: pop_node(Node<T1, T2> *&root, T1 &_key, T2 &val, Comparator<T1> *cmp, vector<Node<T1, T2> (*)> &v) {
 
     Node<T1, T2> *tmp_par = root;
     Node<T1, T2> *removeable = root;
@@ -232,7 +229,6 @@ int BinaryTree<T1, T2>:: Pop:: pop_node(Node<T1, T2> *&root, T1 &_key, T2 &val, 
 
         delete removeable;
 
-        hook();
         return 0;
     }
     else if ((removeable->left != nullptr and removeable->right == nullptr) or
@@ -255,12 +251,12 @@ int BinaryTree<T1, T2>:: Pop:: pop_node(Node<T1, T2> *&root, T1 &_key, T2 &val, 
     else {
         Node <T1, T2> *tmp = removeable->right;
         tmp_par = removeable;
-        v.push_back(tmp_par)
+        v.push_back(tmp_par);
         param = 1;
         while (tmp->left != nullptr) {
             param = -1;
             tmp_par = tmp;
-            v.push_back(tmp_par)
+            v.push_back(tmp_par);
             tmp = tmp->left;
         }
         removeable->key = tmp->key;
@@ -287,17 +283,14 @@ T2& BinaryTree<T1,T2>:: search(const T1 &_key) {
 
 template<typename T1, typename T2>
 int BinaryTree<T1, T2>:: Search:: find_node(Node<T1, T2> *&root, const T1 &_key, Node<T1, T2> *&req_node, Comparator<T1> *cmp) const {
-    hook();
     Node<T1, T2> *tmp = root;
     while (int res = cmp->compare(_key, tmp->key)) {
         tmp = tmp->chld(res);
         if (tmp == nullptr) {
-            hook();
             return 1;
         }
     }
     req_node = tmp;
-    hook();
     return 0;
 }
 
@@ -309,19 +302,19 @@ void BinaryTree<T1, T2>:: Search:: hook() const{
 
 
 template<typename T1, typename T2>
-void BinaryTree<T1, T2>:: Push:: hook(Node<T1, T2> *& root, vector<Node<T1, T2>*> &v, Node<T1, T2> & _node) {
-    if (v.size() == 0)
+void BinaryTree<T1, T2>:: Push:: hook(Node<T1,T2> *&root, vector<Node<T1, T2> (*)> &vec, const Node<T1,T2> &_node, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree) {
+    if (vec.size() == 0)
         root = new Node<T1, T2>(_node.key, _node.value);
     else {
-        Node<T1, T2> *father = v[v.size() - 1];
-        father->chld(_node->key, father->key) = new Node<T1, T2>(_node.key, _node.value);
+        Node<T1, T2> *father = vec[vec.size() - 1];
+        father->chld(cmp->compare(_node.key, father->key)) = new Node<T1, T2>(_node.key, _node.value);
     }
     return;
 }
 
 
 template<typename T1, typename T2>
-void BinaryTree<T1, T2>:: Pop:: hook(vector<Node<T1, T2>*> &v, Node<T1, T2> * nod) {
+void BinaryTree<T1, T2>:: Pop:: hook(Node<T1, T2> *&root, vector<Node<T1, T2> (*)> &vec, const T1 &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree) {
     return;
 }
 
@@ -340,17 +333,17 @@ BinaryTree<T1,T2>& BinaryTree<T1,T2>:: operator =(const BinaryTree<T1, T2> &tree
 
 template <typename T1, typename T2>
 void BinaryTree<T1,T2>:: push(const Node<T1, T2> &_node) {
-    vector<Node<T1, T2>*> v;
+    vector<Node<T1, T2> (*)> v;
     int ex_code = pusher->push_node(root, _node, cmp, v);
     if (ex_code) {
         throw AlreadyExistException(_node.key);
     }
-    hook(root, v, _node);
+    pusher->hook(root, v, _node, cmp, this);
 }
 
 
 template<typename T1, typename T2>
-int BinaryTree<T1, T2>:: Push:: push_node(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp, vector<Node<T1, T2>*> &v) {
+int BinaryTree<T1, T2>:: Push:: push_node(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp, vector<Node<T1, T2> (*)> &v) {
     Node<T1, T2> *tmp = root;
     if (tmp == nullptr) {
         return 0;
@@ -361,9 +354,9 @@ int BinaryTree<T1, T2>:: Push:: push_node(Node<T1, T2> *&root, const Node<T1, T2
         if (!compared)
             return 1;
 
-        tmp = tmp->chld(compared);
-        if (tmp == nullptr)
+        if (!(tmp->chld(compared)))
             return 0;
+        tmp = tmp->chld(compared);
     }
     return 1;
 }
@@ -418,7 +411,7 @@ void BinaryTree<T1,T2>:: postfix_traverse(const Node<T1, T2> *_root, void (*func
 
 template <typename T1, typename T2>
 void BinaryTree<T1,T2>:: clean() {
-    if (root != nullptr) {
+    while (root != nullptr) {
         this->pop(root->key);
     }
 }
@@ -434,54 +427,90 @@ BinaryTree<T1,T2>:: ~BinaryTree() {
 
 
 
-
-
 template <typename T1, typename T2>
 class AVL_Node : public Node<T1, T2> {
-    AVL_Node(T1 _key, T2 _val) : Node(_key, _val) {
+public:
+    AVL_Node(T1 _key, T2 _val) : Node<T1, T2>(_key, _val) {
     }
     int b_f = 0;
-}
+};
 
 
 template <typename T1, typename T2>
 class AVL : public BinaryTree<T1, T2> {
 public:
-    AVL(Comaparator<T1> *comp);
-    AVL(AVL &tree);
+    AVL(Comparator<T1> *comp);
+    AVL(const AVL<T1,T2> &tree);
+    AVL &operator=(const AVL<T1,T2> &tree);
     virtual T2 pop(const T1&);
     virtual void push(const Node<T1, T2>&);
-    virtual T2& search(const T1&);
-    virtual void prefix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
-    virtual void infix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
-    virtual void postfix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
+    // virtual T2& search(const T1&);
+    // virtual void prefix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
+    // virtual void infix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
+    // virtual void postfix(void (*func)(const T1 &_key, const T2 &val, const int &depth)) const;
 
 
     ~AVL();
 
 protected:
-    class AVL_Push : public Push {
-        virtual hook();
+    class AVL_Push : public BinaryTree<T1, T2>::Push {
+        virtual void hook(Node<T1,T2> *&root, vector<Node<T1, T2> (*)> &vec, const Node<T1,T2> &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree);
     };
-    class AVL_Pop : public Pop {
-        int pop_node(AVL_Node<T1, T2> *&root, T1 &_key, T2 &val, Comparator<T1> *cmp, vector<Node<T1, T2>*> &v);
-        virtual bal_hook(vector<Node<T1, T2> (*)>, const T1 &_key, Comparator<T1> *cmp, void (*small_rotate)(AVL_Node<T1, T2> *&), void (*big_rotate)(AVL_Node<T1, T2> *&));
+    class AVL_Pop : public BinaryTree<T1, T2>::Pop {
+        // int pop_node(AVL_Node<T1, T2> *&root, T1 &_key, T2 &val, Comparator<T1> *cmp, vector<Node<T1, T2> (*)> &v);
+        virtual void hook(Node<T1, T2> *&root, vector<Node<T1, T2> (*)> &vec, const T1 &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree);
     };
-    class AVL_Search : public Search { // РАБОТАЕТ ТАК ЖЕ КАК И В БСТ
+    class AVL_Search : public BinaryTree<T1, T2>::Search { // РАБОТАЕТ ТАК ЖЕ КАК И В БСТ
     };
 private:
-    AVL_Node<T1, T2> *root = nullptr;
-    void small_rotate(AVL_Node<T1, T2> *& rootative);
-    void big_rotate(AVL_Node<T1, T2> *& rootative);
+    // AVL_Node<T1, T2> *root = nullptr;
+    void small_rotate(Node<T1, T2> ** rootative);
+    void big_rotate(Node<T1, T2> ** rootative);
 };
 
 template <typename T1, typename T2>
-AVL<T1, T2>:: AVL(Comparator<T1> *comp) {
-    cmp = comp;
-    popper = new AVL_Pop;
-    pusher = new AVL_Push;
-    searcher = new AVL_Search;
+AVL<T1, T2>::AVL(Comparator<T1> *comp){
+    this->cmp = comp;
+    this->popper = new AVL_Pop;
+    this->pusher = new AVL_Push;
+    this->searcher = new AVL_Search;
 }
+
+
+template <typename T1, typename T2>
+AVL<T1, T2>::AVL(const AVL<T1,T2> &tree) {
+    this->cmp = tree.cmp;
+    this->popper = new AVL_Pop;
+    this->pusher = new AVL_Push;
+    this->searcher = new AVL_Search;
+    vector<Node<T1, T2>> _tree;
+    copy_traverse(tree.root, _tree);
+    for (auto node : _tree) {
+        this->push(node);
+    }
+}
+
+// template <typename T1, typename T2>
+// T2& AVL<T1, T2>:: search(const T1&) {
+//     Node<T1, T2> *req_node;
+//     int ex_code = searcher->find_node(root, _key, req_node, cmp);
+//     if (ex_code) {
+//         throw NotExistException(_key);
+//     }
+//     return req_node->key;
+// }
+
+template <typename T1, typename T2>
+AVL<T1, T2> &AVL<T1, T2>::operator=(const AVL<T1,T2> &tree) {
+    this->clean();
+    vector<Node<T1, T2>> _tree;
+    copy_traverse(tree.root, _tree);
+    for (auto node : _tree) {
+        this->push(static_cast<AVL_Node<T1, T2>>(node));
+    }
+    return *this;
+}
+
 
 template <typename T1, typename T2>
 T2 AVL<T1, T2>::pop(const T1 &_key) {
@@ -489,64 +518,66 @@ T2 AVL<T1, T2>::pop(const T1 &_key) {
     T2 popped_val;
     T1 key1 = _key;
     vector<Node<T1, T2> (*)> nodes_to_balance;
-    int ex_code = popper->pop_node(root, key1, popped_val, cmp, nodes_to_balance);
+    int ex_code = this->popper->pop_node(this->root, key1, popped_val, this->cmp, nodes_to_balance);
     if (ex_code) {
-        throw NotExistException(_key);;
+        // throw NotExistException(_key);
+        throw -1;
     }
-    if (root != nullptr)
-        bal_hook(nodes_to_balance, key1);
+    if (this->root != nullptr)
+        this->popper->hook(this->root, nodes_to_balance, _key, this->cmp, this);
     return popped_val;
 }
 
 
 template <typename T1, typename T2>
-void AVL<T1, T2>::small_rotate(AVL_Node<T1, T2> *& rootative) {
-    int factor = rootative->bf / (((rootative->b_f > 1) or (rootative->b_f < -1)) ? 2 : 1);
-    AVL_Node<T1, T2> *tmp = static_cast<AVL_Node<T1, T2>>(rootative->chld(factor));
+void AVL<T1, T2>::small_rotate(Node<T1, T2> ** rootative) {
+    AVL_Node<T1, T2> *rooty = static_cast<AVL_Node<T1, T2>*>(*rootative);
+    int factor = rooty->b_f / (((rooty->b_f > 1) or (rooty->b_f < -1)) ? 2 : 1);
+    AVL_Node<T1, T2> *tmp = static_cast<AVL_Node<T1, T2>*>((*rootative)->chld(factor));
 
     if (tmp->b_f != 0) {
-        rootative->b_f = 0;
-        tmp->bf = 0;
+        rooty->b_f = 0;
+        tmp->b_f = 0;
     }
     else {
-        rootative->b_f = -factor;
-        tmp->bf = factor;
+        rooty->b_f = -factor;
+        tmp->b_f = factor;
     }
 
-    rootative->chld(factor) = tmp->chld(-factor);
-    tmp->chld(-factor) = static_cast<Node<T1, T2> *>(rootative);
-    rootative = tmp;
+    rooty->chld(factor) = tmp->chld(-factor);
+    tmp->chld(-factor) = *rootative;
+    *rootative = static_cast<Node<T1, T2> *>(tmp);
 
 }
 
 
 template <typename T1, typename T2>
-void AVL<T1, T2>::big_rotate(AVL_Node<T1, T2> *& rootative) {
-    int factor = rootative->bf / (((rootative->b_f > 1) or (rootative->b_f < -1)) ? 2 : 1);
-    AVL_Node<T1, T2> *tmp_a, *tmp_b;
-    tmp_a = static_cast<AVL_Node<T1, T2>>(rootative->chld(factor);
-    tmp_b = static_cast<AVL_Node<T1, T2>>(rootative->chld(-factor));
+void AVL<T1, T2>::big_rotate(Node<T1, T2> ** rootative) {
+    AVL_Node<T1, T2> *tmp_a, *tmp_b, *rooty = static_cast<AVL_Node<T1, T2>*>(*rootative);
+    int factor = rooty->b_f / (((rooty->b_f > 1) or (rooty->b_f < -1)) ? 2 : 1);
+    tmp_a = static_cast<AVL_Node<T1, T2>*>((*rootative)->chld(factor));
+    tmp_b = static_cast<AVL_Node<T1, T2>*>(tmp_a->chld(-factor));
 
     tmp_a->chld(-factor) = tmp_b->chld(factor);
     tmp_b->chld(factor) = tmp_a;
-    rootative->chld(factor) = tmp_b->chld(-factor);
-    tmp_b->chld(-factor) = rootative;
+    rooty->chld(factor) = tmp_b->chld(-factor);
+    tmp_b->chld(-factor) = *rootative;
 
-    rootative->b_f = (-factor - tmp_b->b_f) / 2;
+    rooty->b_f = (-factor - tmp_b->b_f) / 2;
     tmp_a->b_f = (factor - tmp_b->b_f) / 2;
     tmp_b->b_f = 0;
 
-    rootative = tmp_b;
+    *rootative = tmp_b;
 }
 
 
 template <typename T1, typename T2>
-void AVL<T1, T2>:: AVL_Pop::bal_hook(vector<Node<T1, T2> (*)> &vec, const T1 &_key, Comparator<T1> *cmp, void (*small_rotate)(AVL_Node<T1, T2> *&), void (*big_rotate)(AVL_Node<T1, T2> *&)) {
+void AVL<T1, T2>:: AVL_Pop::hook(Node<T1, T2> *&root, vector<Node<T1, T2> (*)> &vec, const T1 &_key, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree) {
     T1 tmp_key = _key;
     long long len = vec.size();
-    for (long long i = len - 1; i > 0; i--) {
+    for (long long i = len - 1; i >= 0; i--) {
         AVL_Node<T1, T2> *node = static_cast<AVL_Node<T1, T2>*>(vec[i]);
-        int res = cmp->compare(tmp_key, node->key)
+        int res = cmp->compare(tmp_key, node->key);
         if (res > 0)
             node->b_f--;
         else
@@ -555,13 +586,19 @@ void AVL<T1, T2>:: AVL_Pop::bal_hook(vector<Node<T1, T2> (*)> &vec, const T1 &_k
             return;
         }
         else if (node->b_f == 2 or node->b_f == -2) {
-            if ((static_cast<AVL_Node<T1, T2>*>(node->chld(b_f/2))->b_f == node->b_f/2) or (static_cast<AVL_Node<T1, T2>*>(node->chld(b_f/2))->b_f == 0)) { // SMALL ROTATE
-                small_rotate(node);
+            if ((static_cast<AVL_Node<T1, T2>*>(node->chld(node->b_f/2))->b_f == node->b_f/2) or (static_cast<AVL_Node<T1, T2>*>(node->chld(node->b_f/2))->b_f == 0)) { // SMALL ROTATE
+                static_cast<AVL<T1, T2> *>(tree)->small_rotate(&(vec[i]));
             }
             else { // BIG ROTATE
-                big_rotate(node);
+                static_cast<AVL<T1, T2> *>(tree)->big_rotate(&(vec[i]));
             }
-            if (node->b_f != 0)
+            if (i) {
+                (vec[i - 1])->chld(cmp->compare((vec[i])->key, (vec[i-1])->key)) = vec[i];
+            }
+            else {
+                root = vec[i];
+            }
+            if ((static_cast<AVL_Node<T1, T2>*>(node))->b_f != 0)
                 return;
         }
         tmp_key = node->key;
@@ -569,76 +606,139 @@ void AVL<T1, T2>:: AVL_Pop::bal_hook(vector<Node<T1, T2> (*)> &vec, const T1 &_k
 }
 
 
-template <typename T1, typename T2>
-int &AVL<T1, T2>:: AVL_Push:: push(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp) {
-    AVL_Node<T1, T2> *t = root; // родитель lmp
-    AVL_Node<T1, T2> *s = root; // место перебалансировки
-    AVL_Node<T1, T2> *p = root; // продвижение по дереву
-    AVL_Node<T1, T2> *q = root;
-    int res = 0;
-    while (q != nullptr) {
-        res = cmp->compare(_node.key, tmp->key);
-        if (!res) {
-            return 1;
-        }
-        q = p->chld(res)
-        if (!q) {
-            break;
-        }
-        if (q->b_f) {
-            t = p;
-            s = q
-        }
-        p = q
-    }
-
-    q = new AVL_Node<T1, T2>(_node.key, _node.val);
-    if (!root) {
-        root = q;
-        return;
-    }
-    p->chld(res) = q;
-    int a = (_node->key < s->key) ? -1 : 1;
-    p = s->chld(a);
-    AVL_Node<T1, T2> *r = p;
-    while (p != q) {
-        res = cmp->compare(_node->key, p->key)
-        if (!res) break;
-        p->b_f = res;
-        p = p.chld(res);
-    }
-
-    if (s->b_f != a) {
-        s->b_f += a;
-        return 0;
-    }
-
-    if (r->b_F == a) { // SMALL ROTATE
-        p = r;
-        s->chld(a) = r->chld(-a);
-        r->chld(-a) = s;
-        s->b_f = 0;
-        r->b_f = 0;
-    }
-    else { // TWIN ROTATE
-        p = r->chld(-a);
-        r->chld(-a) = p->chld(a);
-        p->chld(a) = r;
-        s->chld(a) = p->chld(-a);
-        p->chld(-a) = s;
-        s->b_f = (-a - p->b_f) / 2;
-        r->b_f = (a - p->b_f) / 2;
-        p->b_f = 0;
-    }
-    if (s == t->right) {
-        t->right = p;
-    }
+template<typename T1, typename T2>
+void AVL<T1, T2>::AVL_Push::hook(Node<T1,T2> *&root, vector<Node<T1, T2> (*)> &vec, const Node<T1,T2> &_node, Comparator<T1> *cmp, BinaryTree<T1, T2> * tree) {
+    T1 tmp_key = _node.key;
+    long long len = vec.size();
+    if (len == 0)
+        root = new AVL_Node<T1, T2>(_node.key, _node.value);
     else {
-        t->left = p
+        Node<T1, T2> *father = vec[len - 1];
+        father->chld(cmp->compare(_node.key, father->key)) = new AVL_Node<T1, T2>(_node.key, _node.value);
     }
-    return 0;
+    for (long long i = len - 1; i >= 0; i--) {
+        AVL_Node<T1, T2> *node = static_cast<AVL_Node<T1, T2>*>(vec[i]);
+        int res = cmp->compare(tmp_key, node->key);
+        if (res < 0)
+            node->b_f--;
+        else
+            node->b_f++;
+        if (node->b_f == 0){
+            return;
+        }
+        else if (node->b_f == 2 or node->b_f == -2) {
+            if ((static_cast<AVL_Node<T1, T2>*>(node->chld(node->b_f/2))->b_f == node->b_f/2) or (static_cast<AVL_Node<T1, T2>*>(node->chld(node->b_f/2))->b_f == 0)) { // SMALL ROTATE
+                static_cast<AVL<T1, T2> *>(tree)->small_rotate(&(vec[i]));
+            }
+            else { // BIG ROTATE
+                static_cast<AVL<T1, T2> *>(tree)->big_rotate(&(vec[i]));
+            }
+            if (i) {
+                (vec[i - 1])->chld(cmp->compare((vec[i])->key, (vec[i-1])->key)) = vec[i];
+            }
+            else {
+                root = vec[i];
+            }
+            if ((static_cast<AVL_Node<T1, T2>*>(node))->b_f == 0)
+                return;
+        }
+        tmp_key = vec[i]->key;
+    }
+    return;
 }
 
+
+
+template <typename T1, typename T2>
+void AVL<T1, T2>:: push(const Node<T1, T2> &_node) {
+    vector<Node<T1, T2> (*)> v;
+    int ex_code = this->pusher->push_node(this->root, _node, this->cmp, v);
+    if (ex_code) {
+        // throw AlreadyExistException(_node.key);
+        throw -1;
+    }
+    this->pusher->hook(this->root, v, _node, this->cmp, this);
+}
+
+
+// template <typename T1, typename T2>
+// int &AVL<T1, T2>:: AVL_Push:: push(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp) {
+//     AVL_Node<T1, T2> *t = root; // родитель lmp
+//     AVL_Node<T1, T2> *s = root; // место перебалансировки
+//     AVL_Node<T1, T2> *p = root; // продвижение по дереву
+//     AVL_Node<T1, T2> *q = root;
+//     int res = 0;
+//     while (q != nullptr) {
+//         res = cmp->compare(_node.key, tmp->key);
+//         if (!res) {
+//             return 1;
+//         }
+//         q = p->chld(res)
+//         if (!q) {
+//             break;
+//         }
+//         if (q->b_f) {
+//             t = p;
+//             s = q
+//         }
+//         p = q
+//     }
+//
+//     q = new AVL_Node<T1, T2>(_node.key, _node.val);
+//     if (!root) {
+//         root = q;
+//         return;
+//     }
+//     p->chld(res) = q;
+//     int a = (_node->key < s->key) ? -1 : 1;
+//     p = s->chld(a);
+//     AVL_Node<T1, T2> *r = p;
+//     while (p != q) {
+//         res = cmp->compare(_node->key, p->key)
+//         if (!res) break;
+//         p->b_f = res;
+//         p = p.chld(res);
+//     }
+//
+//     if (s->b_f != a) {
+//         s->b_f += a;
+//         return 0;
+//     }
+//
+//     if (r->b_F == a) { // SMALL ROTATE
+//         p = r;
+//         s->chld(a) = r->chld(-a);
+//         r->chld(-a) = s;
+//         s->b_f = 0;
+//         r->b_f = 0;
+//     }
+//     else { // TWIN ROTATE
+//         p = r->chld(-a);
+//         r->chld(-a) = p->chld(a);
+//         p->chld(a) = r;
+//         s->chld(a) = p->chld(-a);
+//         p->chld(-a) = s;
+//         s->b_f = (-a - p->b_f) / 2;
+//         r->b_f = (a - p->b_f) / 2;
+//         p->b_f = 0;
+//     }
+//     if (s == t->right) {
+//         t->right = p;
+//     }
+//     else {
+//         t->left = p
+//     }
+//     return 0;
+// }
+
+
+template <typename T1, typename T2>
+AVL<T1, T2>::~AVL() {
+    this->clean();
+    delete this->popper;
+    delete this->pusher;
+    delete this->searcher;
+}
 
 
 
@@ -647,25 +747,26 @@ int &AVL<T1, T2>:: AVL_Push:: push(Node<T1, T2> *&root, const Node<T1, T2> &_nod
 
 int main() {
     CmpInt compar;
-    BinaryTree<int, int> tree1(&compar);
-    Node<int, int> node1(4, 16), node2(23, 11), node3(1, 44);
+    AVL<int, int> tree1(&compar);
+    Node<int, int> node1(6, 16), node2(23, 11), node3(8, 44);
     tree1.push(node1);
     tree1.prefix(prt);
+    cout << endl;
     tree1.push(node2);
     tree1.push(node3);
     tree1.prefix(prt);
-    tree1.pop(4);
-    tree1.prefix(prt);
-    try {
-        tree1.pop(323);
-    }
-    catch(BinaryTree<int, int>::NotExistException error) {
-        error.what();
-    }
-
-    BinaryTree<int, int> tree2(tree1);
-
-    tree2.prefix(prt);
+    // tree1.pop(4);
+    // tree1.prefix(prt);
+    // try {
+    //     tree1.pop(323);
+    // }
+    // catch(BinaryTree<int, int>::NotExistException error) {
+    //     error.what();
+    // }
+    //
+    // BinaryTree<int, int> tree2(tree1);
+    //
+    // tree2.prefix(prt);
 
     return 0;
 }
