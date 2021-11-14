@@ -5,7 +5,38 @@
 
 using namespace std;
 
-
+////////////
+template<typename T1>
+class NotExistException : public exception {
+private:
+    string except;
+    T1 _key;
+public:
+    NotExistException (const T1 key1) {
+        _key = key1;
+        except = "Element does not exist";
+    }
+    const char* what() const noexcept {
+        cout << except << ": key = " << _key << endl;
+        return except.c_str();
+    };
+};
+template<typename T1>
+class AlreadyExistException : public exception {
+private:
+    string except;
+    T1 _key;
+public:
+    AlreadyExistException (const T1 key1) {
+        _key = key1;
+        except = "Element already exist";
+    }
+    const char* what() const noexcept {
+        cout << except << ": key = " << _key << endl;
+        return except.c_str();
+    };
+};
+/////////////////
 
 template <typename T1, typename T2>
 void prt(const T1 &_key, const T2 &val, const int &depth){
@@ -96,37 +127,6 @@ protected:
     Node<T1, T2> *root = nullptr;
     void clean();
 public:
-    ////////////
-    class NotExistException : public exception {
-    private:
-        string except;
-        T1 _key;
-    public:
-        NotExistException (const T1 key1) {
-            _key = key1;
-            except = "Element does not exist";
-        }
-        const char* what() const noexcept {
-            cout << except << ": key = " << _key << endl;
-            return except.c_str();
-        };
-    };
-
-    class AlreadyExistException : public exception {
-    private:
-        string except;
-        T1 _key;
-    public:
-        AlreadyExistException (const T1 key1) {
-            _key = key1;
-            except = "Element already exist";
-        }
-        const char* what() const noexcept {
-            cout << except << ": key = " << _key << endl;
-            return except.c_str();
-        };
-    };
-    /////////////////
 
     BinaryTree(Comparator<T1> *_cmp);
     BinaryTree(const BinaryTree<T1, T2> &tree); // copy
@@ -198,7 +198,7 @@ T2 BinaryTree<T1, T2>::pop(const T1 &_key) {
     vector<Node<T1, T2> (*)> nodes_to_do_smth;
     int ex_code = popper->pop_node(this->root, key1, popped_val, cmp, nodes_to_do_smth);
     if (ex_code) {
-        throw NotExistException(_key);;
+        throw NotExistException<T1>(_key);;
     }
     return popped_val;
 }
@@ -275,7 +275,7 @@ T2& BinaryTree<T1,T2>:: search(const T1 &_key) {
     Node<T1, T2> *req_node;
     int ex_code = searcher->find_node(root, _key, req_node, cmp);
     if (ex_code) {
-        throw NotExistException(_key);
+        throw NotExistException<T1>(_key);
     }
     return req_node->key;
 }
@@ -336,7 +336,7 @@ void BinaryTree<T1,T2>:: push(const Node<T1, T2> &_node) {
     vector<Node<T1, T2> (*)> v;
     int ex_code = pusher->push_node(root, _node, cmp, v);
     if (ex_code) {
-        throw AlreadyExistException(_node.key);
+        throw AlreadyExistException<T1>(_node.key);
     }
     pusher->hook(root, v, _node, cmp, this);
 }
@@ -503,8 +503,8 @@ T2 AVL<T1, T2>::pop(const T1 &_key) {
     vector<Node<T1, T2> (*)> nodes_to_balance;
     int ex_code = this->popper->pop_node(this->root, key1, popped_val, this->cmp, nodes_to_balance);
     if (ex_code) {
-        // throw NotExistException(_key);
-        throw -1;
+        throw NotExistException<T1>(_key);
+        // throw -1;
     }
     if (this->root != nullptr)
         this->popper->hook(this->root, nodes_to_balance, _key, this->cmp, this);
@@ -637,82 +637,11 @@ void AVL<T1, T2>:: push(const Node<T1, T2> &_node) {
     vector<Node<T1, T2> (*)> v;
     int ex_code = this->pusher->push_node(this->root, _node, this->cmp, v);
     if (ex_code) {
-        // throw AlreadyExistException(_node.key);
-        throw -1;
+        throw AlreadyExistException<T1>(_node.key);
+        // throw -1;
     }
     this->pusher->hook(this->root, v, _node, this->cmp, this);
 }
-
-
-// template <typename T1, typename T2>
-// int &AVL<T1, T2>:: AVL_Push:: push(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp) {
-//     AVL_Node<T1, T2> *t = root; // родитель lmp
-//     AVL_Node<T1, T2> *s = root; // место перебалансировки
-//     AVL_Node<T1, T2> *p = root; // продвижение по дереву
-//     AVL_Node<T1, T2> *q = root;
-//     int res = 0;
-//     while (q != nullptr) {
-//         res = cmp->compare(_node.key, tmp->key);
-//         if (!res) {
-//             return 1;
-//         }
-//         q = p->chld(res)
-//         if (!q) {
-//             break;
-//         }
-//         if (q->b_f) {
-//             t = p;
-//             s = q
-//         }
-//         p = q
-//     }
-//
-//     q = new AVL_Node<T1, T2>(_node.key, _node.val);
-//     if (!root) {
-//         root = q;
-//         return;
-//     }
-//     p->chld(res) = q;
-//     int a = (_node->key < s->key) ? -1 : 1;
-//     p = s->chld(a);
-//     AVL_Node<T1, T2> *r = p;
-//     while (p != q) {
-//         res = cmp->compare(_node->key, p->key)
-//         if (!res) break;
-//         p->b_f = res;
-//         p = p.chld(res);
-//     }
-//
-//     if (s->b_f != a) {
-//         s->b_f += a;
-//         return 0;
-//     }
-//
-//     if (r->b_F == a) { // SMALL ROTATE
-//         p = r;
-//         s->chld(a) = r->chld(-a);
-//         r->chld(-a) = s;
-//         s->b_f = 0;
-//         r->b_f = 0;
-//     }
-//     else { // TWIN ROTATE
-//         p = r->chld(-a);
-//         r->chld(-a) = p->chld(a);
-//         p->chld(a) = r;
-//         s->chld(a) = p->chld(-a);
-//         p->chld(-a) = s;
-//         s->b_f = (-a - p->b_f) / 2;
-//         r->b_f = (a - p->b_f) / 2;
-//         p->b_f = 0;
-//     }
-//     if (s == t->right) {
-//         t->right = p;
-//     }
-//     else {
-//         t->left = p
-//     }
-//     return 0;
-// }
 
 
 template <typename T1, typename T2>
@@ -738,18 +667,78 @@ int main() {
     tree1.push(node2);
     tree1.push(node3);
     tree1.prefix(prt);
-    // tree1.pop(4);
-    // tree1.prefix(prt);
-    // try {
-    //     tree1.pop(323);
-    // }
-    // catch(BinaryTree<int, int>::NotExistException error) {
-    //     error.what();
-    // }
-    //
-    // BinaryTree<int, int> tree2(tree1);
-    //
-    // tree2.prefix(prt);
 
     return 0;
 }
+
+
+
+// template <typename T1, typename T2>
+// int &AVL<T1, T2>:: AVL_Push:: push(Node<T1, T2> *&root, const Node<T1, T2> &_node, Comparator<T1> *cmp) {
+    //     AVL_Node<T1, T2> *t = root; // родитель lmp
+    //     AVL_Node<T1, T2> *s = root; // место перебалансировки
+    //     AVL_Node<T1, T2> *p = root; // продвижение по дереву
+    //     AVL_Node<T1, T2> *q = root;
+    //     int res = 0;
+    //     while (q != nullptr) {
+        //         res = cmp->compare(_node.key, tmp->key);
+        //         if (!res) {
+            //             return 1;
+            //         }
+            //         q = p->chld(res)
+            //         if (!q) {
+                //             break;
+                //         }
+                //         if (q->b_f) {
+                    //             t = p;
+                    //             s = q
+                    //         }
+                    //         p = q
+                    //     }
+                    //
+                    //     q = new AVL_Node<T1, T2>(_node.key, _node.val);
+                    //     if (!root) {
+                        //         root = q;
+                        //         return;
+                        //     }
+                        //     p->chld(res) = q;
+                        //     int a = (_node->key < s->key) ? -1 : 1;
+                        //     p = s->chld(a);
+                        //     AVL_Node<T1, T2> *r = p;
+                        //     while (p != q) {
+                            //         res = cmp->compare(_node->key, p->key)
+                            //         if (!res) break;
+                            //         p->b_f = res;
+                            //         p = p.chld(res);
+                            //     }
+                            //
+                            //     if (s->b_f != a) {
+                                //         s->b_f += a;
+                                //         return 0;
+                                //     }
+                                //
+                                //     if (r->b_F == a) { // SMALL ROTATE
+                                    //         p = r;
+                                    //         s->chld(a) = r->chld(-a);
+                                    //         r->chld(-a) = s;
+                                    //         s->b_f = 0;
+                                    //         r->b_f = 0;
+                                    //     }
+                                    //     else { // TWIN ROTATE
+                                        //         p = r->chld(-a);
+                                        //         r->chld(-a) = p->chld(a);
+                                        //         p->chld(a) = r;
+                                        //         s->chld(a) = p->chld(-a);
+                                        //         p->chld(-a) = s;
+                                        //         s->b_f = (-a - p->b_f) / 2;
+                                        //         r->b_f = (a - p->b_f) / 2;
+                                        //         p->b_f = 0;
+                                        //     }
+                                        //     if (s == t->right) {
+                                            //         t->right = p;
+                                            //     }
+                                            //     else {
+                                                //         t->left = p
+                                                //     }
+                                                //     return 0;
+                                                // }
